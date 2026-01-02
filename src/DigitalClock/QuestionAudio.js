@@ -1,97 +1,74 @@
-// QuestionSpeaker.js
 import React, { useEffect, useRef, useState } from "react";
-import { timeModeList } from "../timeLine";
 
-export default function QuestionSpeaker({ speakTrigger }) {
-  const indexRef = useRef(0);
-  const startedRef = useRef(false);
-
-  // ★ ブラウザの自動再生制限を回避するための「アンロック」状態
+export default function QuestionAudio({ speakTrigger, unlockKey, text }) {
   const [unlocked, setUnlocked] = useState(false);
 
-  // ★ voices が読み込まれたか（最初は空のことがある）
   const voicesReadyRef = useRef(false);
+  const voiceJaRef = useRef(null);
+  const speakingRef = useRef(false);
 
-  // -------------------------
-  // ① ユーザー操作でアンロック（見た目は何も出さない）
-  // -------------------------
+  // ★ 最新textを保持（depsから外すため）
+  const latestTextRef = useRef("");
   useEffect(() => {
-    const unlock = () => setUnlocked(true);
+    latestTextRef.current = text || "";
+  }, [text]);
 
-    // どれか1回でも操作があればOK（once）
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
+  useEffect(() => {
+    if (unlockKey > 0) setUnlocked(true);
+  }, [unlockKey]);
 
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
-
-  // -------------------------
-  // ② voices の準備待ち
-  // -------------------------
   useEffect(() => {
     const synth = window.speechSynthesis;
 
-    const checkVoices = () => {
-      const vs = synth.getVoices();
-      if (vs && vs.length > 0) voicesReadyRef.current = true;
+    const pickJaVoice = () => {
+      const vs = synth.getVoices() || [];
+      if (vs.length > 0) voicesReadyRef.current = true;
+
+      const ja =
+        vs.find((v) => v.lang === "ja-JP" && /Kyoko/i.test(v.name)) ||
+        vs.find((v) => v.lang === "ja-JP") ||
+        vs.find((v) => /ja/i.test(v.lang));
+
+      if (ja) voiceJaRef.current = ja;
     };
 
-    checkVoices(); // 初回チェック
-    synth.onvoiceschanged = checkVoices; // 後から入る環境用
-
-    return () => {
-      synth.onvoiceschanged = null;
-    };
+    pickJaVoice();
+    synth.onvoiceschanged = pickJaVoice;
+    return () => (synth.onvoiceschanged = null);
   }, []);
 
-  // -------------------------
-  // ③ 実際にしゃべる
-  // -------------------------
-  const speak = (text) => {
+  const speak = (t) => {
+    if (!t) return;
     const synth = window.speechSynthesis;
-    synth.cancel();
 
-    const u = new SpeechSynthesisUtterance(text);
+    if (speakingRef.current) return;
+
+    const u = new SpeechSynthesisUtterance(t);
     u.lang = "ja-JP";
-    u.rate = 1;
+    if (voiceJaRef.current) u.voice = voiceJaRef.current;
+
+    speakingRef.current = true;
+    u.onend = () => (speakingRef.current = false);
+    u.onerror = () => (speakingRef.current = false);
 
     synth.speak(u);
   };
 
+  // ★ 発話は speakTrigger の変化だけで行う
   useEffect(() => {
-    // 初期ロードは何もしない
     if (speakTrigger === 0) return;
-
-    // ★ アンロック前は喋れない環境がある（リロード後に無音の主因）
     if (!unlocked) return;
 
-    // ★ voices が空のままの瞬間があるので、準備できるまで待つ
-    if (!voicesReadyRef.current) {
-      // 少しだけ遅延して再試行（最小限の保険）
-      const id = setTimeout(() => {
-        // speakTrigger を変えずにもう一度同じ処理を走らせたいので、
-        // ここでは「同じ質問をそのまま speak」する方式にする
-        const item = timeModeList[indexRef.current];
-        if (item?.question) speak(item.question);
-      }, 200);
+    const t = latestTextRef.current;
+    if (!t) return;
 
+    if (!voicesReadyRef.current) {
+      const id = setTimeout(() => speak(t), 300);
       return () => clearTimeout(id);
     }
 
-    // 初回だけ indexRef をリセット
-    if (!startedRef.current) {
-      indexRef.current = 0;
-      startedRef.current = true;
-    }
-
-    const item = timeModeList[indexRef.current];
-    if (item?.question) speak(item.question);
-
-    indexRef.current = (indexRef.current + 1) % timeModeList.length;
-  }, [speakTrigger, unlocked]);
+    speak(t);
+  }, [speakTrigger, unlocked]); // ★ text を外す
 
   return null;
 }

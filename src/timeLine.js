@@ -25,6 +25,12 @@ const question5 = "今、どれくらい眠いですか？";
 
 
 const timeModeList = [
+  { time: "13:14:23", mode: 1, question: "13 たす 24 わ？" },   
+  { time: "13:59:09", mode: 1, question: "78 たす 11 わ？" },
+  { time: "15:39:11", mode: 1, question: "39 たす 41 わ？" }
+];
+
+const timeModeList_1 = [
   { time: "13:14:23", mode: 1, question: "13 たす 24 わ？" },
   { time: "13:20:51", mode: 2, question: minute_question },
   { time: "13:30:42", mode: 1, question: "48 たす 17 わ？" },
@@ -46,6 +52,7 @@ const timeModeList = [
   { time: "15:33:58", mode: 1, question: "57 たす 22 わ？" },
   { time: "15:39:11", mode: 1, question: "39 たす 41 わ？" }
 ];
+
 
 
 

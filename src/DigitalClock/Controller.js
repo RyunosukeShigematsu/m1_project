@@ -4,12 +4,19 @@ import { timeModeList } from "../timeLine";
 import Clock from "./Clock";
 import QuestionAudio from "./QuestionAudio";
 import "./Controller.css";
+import createAudioCapture from "./AudioCapture";
 
-const SHOW_DURATION = 3000;
-const HIDE_DURATION = 22000;
-const ASK_DELAY = 5000;
-const BEEP_LEAD = 500; // 時計表示の0.5秒前に鳴らす
+// const SHOW_DURATION = 3000;
+// const HIDE_DURATION = 22000;
+// const ASK_DELAY = 5000;
+// const BEEP_LEAD = 500; // 時計表示の0.5秒前に鳴らす
+// const END_DELAY = 15_000;        // ★ 追加：最後の質問後〜終了まで
 
+const SHOW_DURATION = 2000;   // 1.5 秒
+const HIDE_DURATION = 8000;   // 8.0 秒
+const ASK_DELAY = 3000;       // 1.5 秒
+const BEEP_LEAD = 500;        // 0.3 秒
+const END_DELAY = 15_000;        // ★ 追加：最後の質問後〜終了まで
 
 
 // HH:MM:SS を 1 秒進める
@@ -63,18 +70,91 @@ export default function TaskController() {
   // =============================
   // 状態管理
   // =============================
-  const [timeString, setTimeString] = useState("--:--:--"); // ← 最初はダミー
+  const [timeString, setTimeString] = useState("--:--:--");
   const [visible, setVisible] = useState(false);
   const [mode, setMode] = useState(0);
   const [speakTrigger, setSpeakTrigger] = useState(0);
+  const [started, setStarted] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [unlockKey, setUnlockKey] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState("");
+
+  const audioCapRef = useRef(null);
 
   const indexRef = useRef(0);
+  const trialCountRef = useRef(0);
   const tickRef = useRef(null);
-
-  const [started, setStarted] = useState(false);
-
-  // ② 非表示後に質問音声（visible が true→false になった瞬間だけ）
   const prevVisibleRef = useRef(visible);
+
+  const endTimerRef = useRef(null);
+  const beepTimerRef = useRef(null);
+  const showTimerRef = useRef(null);
+  const askTimerRef = useRef(null);
+
+  const TOTAL_TRIALS = timeModeList.length;
+
+
+  // =============================
+  // ③ AudioCapture インスタンス作成
+  // =============================
+  useEffect(() => {
+    if (!audioCapRef.current) {
+      audioCapRef.current = createAudioCapture({
+        timesliceMs: 10_000,
+        uploadUrl: "https://shigematsu.nkmr.io/m1_project/api/upload_audio.php", // ★AudioCapture側で持たせる
+      });
+    }
+  }, []);
+
+  // =============================
+  // ③ アンマウント時の掃除（推奨）
+  // =============================
+  useEffect(() => {
+    return () => {
+      try {
+        clearTimeout(beepTimerRef.current);
+        clearTimeout(showTimerRef.current);
+        clearTimeout(askTimerRef.current);
+        clearTimeout(endTimerRef.current);
+        clearInterval(tickRef.current);
+      } catch (_) { }
+      try {
+        audioCapRef.current?.forceStop?.();
+      } catch (_) { }
+    };
+  }, []);
+
+  // =============================
+  // ④ リセット
+  // =============================
+  const resetRun = async () => {
+    clearTimeout(beepTimerRef.current);
+    clearTimeout(showTimerRef.current);
+    clearTimeout(askTimerRef.current);
+    clearTimeout(endTimerRef.current);
+    clearInterval(tickRef.current);
+    endTimerRef.current = null;
+
+    // 録音が残ってたら止める（安全優先）
+    try {
+      await audioCapRef.current?.forceStop?.();
+      console.log("[REC] force stopped");
+    } catch (e) {
+      console.warn("[REC] forceStop failed:", e);
+    }
+
+    indexRef.current = 0;
+    trialCountRef.current = 0;
+    prevVisibleRef.current = false;
+
+    setSpeakTrigger(0);
+    setVisible(false);
+    setFinished(false);
+    setTimeString("--:--:--");
+    setCurrentQuestion("");
+    setMode(0);
+  };
+
 
   // =============================
   // ① 表示 / 非表示サイクル
@@ -91,10 +171,13 @@ export default function TaskController() {
       if (item) {
         setTimeString(item.time); // ← timeLine から取得
         setMode(item.mode);
+        setCurrentQuestion(item.question ?? "");
       }
 
       // ★このtrialを使ったので、次のtrialへ進める
-      indexRef.current = (indexRef.current + 1) % timeModeList.length;
+      indexRef.current += 1;
+      // ★追加：このtrialを1個消費した
+      trialCountRef.current += 1;
 
       // 表示中だけ 1 秒進める
       clearInterval(tickRef.current);
@@ -108,24 +191,39 @@ export default function TaskController() {
       }, SHOW_DURATION);
     } else {
       // ---- 非表示 ----
- const waitBeforeBeep = Math.max(0, HIDE_DURATION - BEEP_LEAD);
 
-  let beepTimerId = null;
-  let showTimerId = null;
+      // ★追加：次のtrialが無いなら、ビープも表示も予約しない
+      if (indexRef.current >= TOTAL_TRIALS) {
+        clearTimeout(timerId); // ★追加（念のため）
+        clearTimeout(beepTimerRef.current);
+        clearTimeout(showTimerRef.current);
+        clearInterval(tickRef.current);
 
-  beepTimerId = setTimeout(() => {
-    playBeep(); // ★ 表示0.5秒前の「ピ」
+        return () => {
+          clearTimeout(timerId);
+          clearTimeout(beepTimerRef.current);
+          clearTimeout(showTimerRef.current);
+          clearInterval(tickRef.current);
+        };
+      }
 
-    showTimerId = setTimeout(() => {
-      setVisible(true); // ★ 時計表示開始
-    }, BEEP_LEAD);
-  }, waitBeforeBeep);
 
-  return () => {
-    clearTimeout(beepTimerId);
-    clearTimeout(showTimerId);
-    clearInterval(tickRef.current);
-  };
+
+      const waitBeforeBeep = Math.max(0, HIDE_DURATION - BEEP_LEAD);
+
+      beepTimerRef.current = setTimeout(() => {
+        playBeep();
+        showTimerRef.current = setTimeout(() => {
+          setVisible(true);
+        }, BEEP_LEAD);
+      }, waitBeforeBeep);
+
+      return () => {
+        clearTimeout(beepTimerRef.current);
+        clearTimeout(showTimerRef.current);
+        clearInterval(tickRef.current);
+      };
+
     }
 
     return () => {
@@ -145,12 +243,44 @@ export default function TaskController() {
 
     // 時計表示が終わった瞬間
     if (wasVisible && !isVisible) {
-      const id = setTimeout(() => {
-        setSpeakTrigger((t) => t + 1);
+      clearTimeout(askTimerRef.current); // ★追加：二重予約防止
+      askTimerRef.current = setTimeout(() => {
+        setSpeakTrigger(t => t + 1);
+
+        // ★追加：最後の質問を読んだ（= speakTrigger を増やした）後に終了予約
+        if (trialCountRef.current === TOTAL_TRIALS && !endTimerRef.current) {
+          // ★終了が確定した瞬間に、残ってる予約を全部消す
+          clearTimeout(beepTimerRef.current);
+          clearTimeout(showTimerRef.current);
+          clearTimeout(askTimerRef.current);
+          clearInterval(tickRef.current);
+
+          // 念のため今後の表示も止める
+          setVisible(false);
+
+          endTimerRef.current = setTimeout(async () => {
+            try {
+              setFinished(true);
+              setStarted(false);
+              setVisible(false);
+
+              const result = await audioCapRef.current.finishSession();
+
+              console.log("[REC] uploaded:", result);
+              console.log("[REC] isRecording after finish:", audioCapRef.current?.isRecording?.());
+            } catch (e) {
+              console.warn("[REC] upload failed:", e);
+            } finally {
+              endTimerRef.current = null;
+            }
+          }, END_DELAY);
+
+        }
+
       }, ASK_DELAY);
 
       prevVisibleRef.current = isVisible;
-      return () => clearTimeout(id);
+      return () => clearTimeout(askTimerRef.current);
     }
 
     // 状態更新
@@ -158,11 +288,17 @@ export default function TaskController() {
   }, [visible, started]);
 
 
+
   // =============================
-  // ③ 描画（時計）と音声（質問）
+  // ⑤ 描画（時計）と音声（質問）
   // =============================
   return (
     <div className="common-layout">
+      {finished && (
+        <div style={{ position: "absolute", top: 16, left: 16, zIndex: 9999, fontSize: 24 }}>
+          実験終了です．
+        </div>
+      )}
       <div className="clock-wrapper">
         <div className="clock-area">
           <Clock
@@ -176,7 +312,27 @@ export default function TaskController() {
         {!started && (
           <button
             className="controller-start-button"
-            onClick={() => {
+            onClick={async () => {
+              await resetRun();     // ★追加：前回の残骸を消す
+              setUnlockKey((k) => k + 1); // ★追加
+
+              // ★ 録音開始（権限取得もここで）
+              try {
+                await audioCapRef.current.beginSession({
+                  prefix: "session", // 任意（なくてもOK）
+                  extra: {participant: "RANDOM123", set: 1},         // participantIdなど入れたくなったらここ
+                });
+                console.log("[REC] started");
+                // ★ここで確認ログ
+                console.log("[REC] isRecording (immediate):", audioCapRef.current?.isRecording?.());
+                setTimeout(() => {
+                  console.log("[REC] isRecording (100ms):", audioCapRef.current?.isRecording?.());
+                }, 100); 
+
+              } catch (e) {
+                console.warn("[REC] start failed:", e);
+              }
+
               setStarted(true);
               // setVisible(true);
             }}
@@ -185,7 +341,12 @@ export default function TaskController() {
           </button>
         )}
 
-        <QuestionAudio speakTrigger={speakTrigger} />
+        <QuestionAudio
+          speakTrigger={speakTrigger}
+          unlockKey={unlockKey}
+          text={currentQuestion}
+        />
+
       </div>
     </div>
   );
