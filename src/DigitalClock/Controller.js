@@ -5,7 +5,9 @@ import Clock from "./Clock";
 import QuestionAudio from "./QuestionAudio";
 import "./Controller.css";
 import createAudioCapture from "./AudioCapture";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+
 
 // const SHOW_DURATION = 3000;
 // const HIDE_DURATION = 22000;
@@ -87,7 +89,9 @@ export default function TaskController() {
   const tickRef = useRef(null);
   const prevVisibleRef = useRef(visible);
 
-  const endTimerRef = useRef(null);
+  const endTimerIdRef = useRef(null);     // setTimeout のIDを持つ
+  const endLockedRef = useRef(false);     // 終了処理の二重実行防止
+
   const beepTimerRef = useRef(null);
   const showTimerRef = useRef(null);
   const askTimerRef = useRef(null);
@@ -96,7 +100,13 @@ export default function TaskController() {
 
   const location = useLocation();
   const participant = location.state?.participant || "anon";
- 
+
+  const navigate = useNavigate();
+
+  // ★セット管理
+  const TOTAL_SETS = 2;          // ←ここを変えればセット数変わる
+  const [setNo, setSetNo] = useState(1); // 1始まり
+  const [allDone, setAllDone] = useState(false);
 
 
   // =============================
@@ -120,7 +130,7 @@ export default function TaskController() {
         clearTimeout(beepTimerRef.current);
         clearTimeout(showTimerRef.current);
         clearTimeout(askTimerRef.current);
-        clearTimeout(endTimerRef.current);
+        clearTimeout(endTimerIdRef.current);
         clearInterval(tickRef.current);
       } catch (_) { }
       try {
@@ -136,9 +146,11 @@ export default function TaskController() {
     clearTimeout(beepTimerRef.current);
     clearTimeout(showTimerRef.current);
     clearTimeout(askTimerRef.current);
-    clearTimeout(endTimerRef.current);
+    clearTimeout(endTimerIdRef.current);
     clearInterval(tickRef.current);
-    endTimerRef.current = null;
+    endLockedRef.current = false;
+    endTimerIdRef.current = null;
+
 
     // 録音が残ってたら止める（安全優先）
     try {
@@ -253,7 +265,8 @@ export default function TaskController() {
         setSpeakTrigger(t => t + 1);
 
         // ★追加：最後の質問を読んだ（= speakTrigger を増やした）後に終了予約
-        if (trialCountRef.current === TOTAL_TRIALS && !endTimerRef.current) {
+        if (trialCountRef.current === TOTAL_TRIALS && !endLockedRef.current) {
+          endLockedRef.current = true; // ★ここで即ロック
           // ★終了が確定した瞬間に、残ってる予約を全部消す
           clearTimeout(beepTimerRef.current);
           clearTimeout(showTimerRef.current);
@@ -263,7 +276,7 @@ export default function TaskController() {
           // 念のため今後の表示も止める
           setVisible(false);
 
-          endTimerRef.current = setTimeout(async () => {
+          endTimerIdRef.current = setTimeout(async () => {
             try {
               setFinished(true);
               setStarted(false);
@@ -273,10 +286,20 @@ export default function TaskController() {
 
               console.log("[REC] uploaded:", result);
               console.log("[REC] isRecording after finish:", audioCapRef.current?.isRecording?.());
+
+
+              // ★セット終了後の分岐
+              if (setNo >= TOTAL_SETS) {
+                setAllDone(true);
+              }
+              // else 何もしない
+
+
             } catch (e) {
               console.warn("[REC] upload failed:", e);
             } finally {
-              endTimerRef.current = null;
+              endTimerIdRef.current = null;
+              // endLockedRef.current はここでは戻さない（次セット開始時に resetRun で解除）
             }
           }, END_DELAY);
 
@@ -290,7 +313,7 @@ export default function TaskController() {
 
     // 状態更新
     prevVisibleRef.current = isVisible;
-  }, [visible, started]);
+  }, [visible, started, setNo, TOTAL_SETS]);
 
 
 
@@ -299,11 +322,7 @@ export default function TaskController() {
   // =============================
   return (
     <div className="common-layout">
-      {finished && (
-        <div style={{ position: "absolute", top: 16, left: 16, zIndex: 9999, fontSize: 24 }}>
-          実験終了です．
-        </div>
-      )}
+
       <div className="clock-wrapper">
         <div className="clock-area">
           <Clock
@@ -314,36 +333,36 @@ export default function TaskController() {
         </div>
 
         {/* ★ 時計の真下に開始ボタン */}
-        {!started && (
+        {!started && !allDone && (
           <button
             className="controller-start-button"
             onClick={async () => {
-              await resetRun();     // ★追加：前回の残骸を消す
-              setUnlockKey((k) => k + 1); // ★追加
+              const nextSetNo = (finished && setNo < TOTAL_SETS) ? setNo + 1 : setNo;
 
-              // ★ 録音開始（権限取得もここで）
+              // 表示用の state を更新（必要なときだけ）
+              if (nextSetNo !== setNo) setSetNo(nextSetNo);
+
+              setAllDone(false);
+              await resetRun();
+              setUnlockKey((k) => k + 1);
+
               try {
                 await audioCapRef.current.beginSession({
-                  prefix: "session", // 任意（なくてもOK）
-                  extra: { participant, set: 1 },
+                  prefix: "session",
+                  extra: { participant, set: nextSetNo }, // ★ここが重要
                 });
                 console.log("[REC] started");
-                // ★ここで確認ログ
-                console.log("[REC] isRecording (immediate):", audioCapRef.current?.isRecording?.());
-                setTimeout(() => {
-                  console.log("[REC] isRecording (100ms):", audioCapRef.current?.isRecording?.());
-                }, 100); 
-
               } catch (e) {
                 console.warn("[REC] start failed:", e);
+                return;
               }
 
               setStarted(true);
-              // setVisible(true);
             }}
           >
             開始
           </button>
+
         )}
 
         <QuestionAudio
@@ -351,8 +370,50 @@ export default function TaskController() {
           unlockKey={unlockKey}
           text={currentQuestion}
         />
-
       </div>
+
+      {finished &&
+        createPortal(
+          <div style={styles.setToast}>
+            <span>{setNo}セット目終了しました．</span>
+
+            {allDone && (
+              <button
+                style={styles.homeBtn}
+                onClick={() => navigate("/")}
+              >
+                ホーム画面へ
+              </button>
+            )}
+          </div>,
+          document.body
+        )
+      }
     </div>
   );
 }
+
+
+const styles = {
+  setToast: {
+    position: "fixed",
+    right: 16,
+    bottom: 16,
+    zIndex: 9999,
+    fontSize: 20,
+    background: "rgba(0,0,0,0.65)",
+    color: "white",
+    padding: "12px 14px",
+    borderRadius: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  homeBtn: {
+    padding: "8px 12px",
+    fontSize: 16,
+    borderRadius: 10,
+    border: "none",
+    cursor: "pointer",
+  },
+};
