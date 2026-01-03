@@ -86,6 +86,9 @@ export default function PracticeFlagTask() {
 
     return (
         <div className="card-task-container">
+            <div className="practice-badge">
+                練習中
+            </div>
             {/* ✅ 右上：練習終了（常に表示） */}
             {started && (
                 <button
