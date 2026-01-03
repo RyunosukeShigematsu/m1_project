@@ -8,16 +8,18 @@ import { flagSequence } from '../timeLine'; // ← ★ 追加
 
 
 export default function FlagTask() {
-  const LIMIT_SECONDS = 10; // ← ここだけ変えればOK！
-  const [timeLeft, setTimeLeft] = useState(LIMIT_SECONDS); // ← 制限時間（秒）をここで設定
+  const MEMORIZE_SECONDS = 10; // ← ここだけ変えればOK！
+  const [timeLeft, setTimeLeft] = useState(MEMORIZE_SECONDS); // ← 制限時間（秒）をここで設定  
+
   const navigate = useNavigate();
-  const voiceRef = useRef(null);
-  const askTimerRef = useRef(null);
-
-  const TOTAL_TRIALS = 2;
   const { state } = useLocation();
-
+  
+  const TOTAL_TRIALS = state?.totalTrials ?? 3;
   const trialIndex = state?.trialIndex ?? 0;
+
+  // ★追加：started初期値を state から拾う
+  const startedFromState = state?.started === true;
+  const [started, setStarted] = useState(startedFromState);
 
   // === 国旗リストをflagSequenceから取得 ===
   const ordered = useMemo(() => {
@@ -27,24 +29,37 @@ export default function FlagTask() {
   }, [trialIndex]);
 
   // プログレスバー用の割合計算（0〜100）
-  const progress = (timeLeft / LIMIT_SECONDS) * 100;
+  const progress = (timeLeft / MEMORIZE_SECONDS) * 100;
+
+    useEffect(() => {
+    // 2回目以降（started:trueで戻ってくる想定）はStart不要
+    if (state?.started === true) {
+      setStarted(true);
+      setTimeLeft(MEMORIZE_SECONDS); // 戻ってきたらリセットして即開始
+      setLeftOpen(null);
+      setRightOpen(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trialIndex]);
+
 
   // 🕒 タイマー減少処理（0.1秒ずつ減るタイプ）
   useEffect(() => {
+    if (!started) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 0.1) {
           clearInterval(timer);
-          setTimeLeft(0); // ← まずバーを完全に0に
+          // setTimeLeft(0); // ← まずバーを完全に0に
           // 0.3秒後に遷移（CSS反映の余裕を与える）
           setTimeout(() => {
             navigate('/flagAnswer', {
               state: {
                 ids: ordered.map(c => c.id),
                 autoSubmit: true,
-
                 trialIndex,          // 今何回目か
                 totalTrials: TOTAL_TRIALS, // 全体で何回か
+                started: true, // ★追加
               },
             });
           }, 300);
@@ -55,7 +70,7 @@ export default function FlagTask() {
     }, 100);
 
     return () => clearInterval(timer);
-  }, [navigate, ordered]);
+  }, [started, navigate, ordered, trialIndex]);
 
 
 
@@ -79,17 +94,40 @@ export default function FlagTask() {
         {trialIndex + 1}/{TOTAL_TRIALS}
       </div>
 
+      {/* ★ 上部UIの共通置き場（位置だけ担当） */}
+      <div className="top-slot">
+        {!started ? (
+          <div className="start-button-wrapper">
+            <button
+              className="flag-start-button"
+              onClick={() => {
+                setLeftOpen(null);
+                setRightOpen(null);
+                setTimeLeft(MEMORIZE_SECONDS);
+                setStarted(true);
+              }}
 
-      {/* 進行ゲージを上部に追加 */}
-      <div className="progress-bar-wrapper">
-        <div
-          className="progress-bar"
-          style={{ width: `${progress}%` }}
-        />
+            >
+              開始
+            </button>
+          </div>
+        ) : (
+          <div className="progress-wrapper">
+            <div className="progress-bar-track">
+              <div
+                className="progress-bar"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="task-message">国旗を覚えてください。</div>
-
+      {started && (
+        <div className="task-message">
+          国旗を覚えてください。
+        </div>
+      )}
 
       <div className="boards-area">
         {/* 左：国旗 */}
@@ -103,7 +141,7 @@ export default function FlagTask() {
               >
                 <FlipCard
                   flipped={flipped}
-                  onToggle={() => handleLeftToggle(i)} // ← クリック処理はこれでOK
+                  onToggle={started ? () => handleLeftToggle(i) : undefined}
                   frontText="flag"
                   backContent={
                     <img
@@ -131,7 +169,7 @@ export default function FlagTask() {
               >
                 <FlipCard
                   flipped={flipped}
-                  onToggle={() => handleRightToggle(i)}
+                  onToggle={started ? () => handleRightToggle(i) : undefined}
                   frontText="name"
                   backContent={<span className="back-text">{c.nameJa}</span>}
                 />

@@ -16,9 +16,9 @@ function shuffle(arr) {
 }
 
 export default function FlagAnswer() {
-  const LIMIT_SECONDS = 10;
-  const [timeLeft, setTimeLeft] = useState(LIMIT_SECONDS);
-  const progress = (timeLeft / LIMIT_SECONDS) * 100;
+  const ANSWER_SECONDS = 10;
+  const [timeLeft, setTimeLeft] = useState(ANSWER_SECONDS);
+  const progress = (timeLeft / ANSWER_SECONDS) * 100;
   const { state } = useLocation();
   const navigate = useNavigate();
   // ○×のフィードバック表示用（null | 'ok' | 'ng'）
@@ -34,9 +34,16 @@ export default function FlagAnswer() {
     const arr = state.ids.map(id => map.get(+id)).filter(Boolean);
     return shuffle(arr)
   }, [state]);
+
   useEffect(() => {
-    if (!base9) navigate('/flagTask', { replace: true });
-  }, [base9, navigate]);
+    if (!base9) {
+      navigate('/flagTask', {
+        replace: true,
+        state: { trialIndex: 0, totalTrials, started: false },
+      });
+    }
+  }, [base9, navigate, totalTrials]);
+
 
   // 上段配置（左右は同じ9種だが並びは独立にシャッフル）
   const left9 = useMemo(() => (base9 ? shuffle(base9) : []), [base9]);  // 左=flag
@@ -161,8 +168,13 @@ export default function FlagAnswer() {
     // FlagTask側でTOTAL_TRIALSを保持してるが、表示のために毎回渡すのが安全
     navigate('/flagTask', {
       replace: true,
-      state: { trialIndex: nextIndex, totalTrials },
+      state: {
+        trialIndex: nextIndex,
+        totalTrials,
+        started: true,   // ★必須
+      },
     });
+
   };
 
 
@@ -192,8 +204,16 @@ export default function FlagAnswer() {
       <div className="trial-counter">
         {trialIndex + 1}/{totalTrials}
       </div>
-      <div className="progress-bar-wrapper">
-        <div className="progress-bar" style={{ width: `${progress}%` }} />
+
+      <div className="top-slot">
+        <div className="progress-wrapper">
+          <div className="progress-bar-track">
+            <div
+              className="progress-bar"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="task-message">対応する国旗を選択してください。</div>

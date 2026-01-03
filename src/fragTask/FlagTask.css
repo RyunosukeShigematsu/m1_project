@@ -394,21 +394,6 @@
   z-index: 3;
 }
 
-/* === 制限時間プログレスバー === */
-.progress-bar-wrapper {
-  position: absolute;
-  top: 80px;                /* 時計に被らないように調整 */
-  left: 50%;                /* 中央寄せ */
-  transform: translateX(-50%);
-  width: 40%;               /* 短め（40%は全幅の4割） */
-  height: 10px;
-  background-color: #e0e0e0; /* バーの背景（グレー） */
-  border-radius: 6px;
-  overflow: hidden;
-  z-index: 10;              /* 時計より上に出す */
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
-}
-
 .progress-bar {
   height: 100%;
   background: linear-gradient(to right, #4caf50, #81c784);
@@ -445,4 +430,72 @@
   font-weight: 800;
   color: #2f3b2f;
   user-select: none;
+}
+
+
+
+.top-slot {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.start-button-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flag-start-button {
+  width: 260px;          /* 横長 */
+  height: 44px;          /* 押しやすい高さ */
+  border-radius: 10px;   /* ★ ピルじゃなく“角丸四角” */
+  border: 1px solid #b4c4b2;
+
+  background: linear-gradient(
+    180deg,
+    #f8f6f0,
+    #f1eee7
+  );                     /* 既存UIと統一感 */
+
+  color: #2f3b2f;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.12),
+    inset 0 1px 0 rgba(255,255,255,.6);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+
+.progress-wrapper {
+  width: 40vw;   /* バーの横幅 */
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 10px;
+  background-color: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #4caf50, #81c784);
+  transition: width 0.08s linear;
 }
