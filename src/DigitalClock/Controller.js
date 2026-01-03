@@ -108,6 +108,14 @@ export default function TaskController() {
   const [setNo, setSetNo] = useState(1); // 1始まり
   const [allDone, setAllDone] = useState(false);
 
+  // ★追加：setNo の最新値を setTimeout 内でも使えるようにする
+  const setNoRef = useRef(1);
+
+  useEffect(() => {
+    setNoRef.current = setNo;
+  }, [setNo]);
+
+
 
   // =============================
   // ③ AudioCapture インスタンス作成
@@ -275,33 +283,29 @@ export default function TaskController() {
 
           // 念のため今後の表示も止める
           setVisible(false);
-
           endTimerIdRef.current = setTimeout(async () => {
+            // ★この終了が「最終セットか」を先に確定（アップロード成否に依存させない）
+            const isLastSet = setNoRef.current >= TOTAL_SETS;
+
             try {
               setFinished(true);
               setStarted(false);
               setVisible(false);
 
+              // アップロードは失敗してもOK（allDoneは別で立てる）
               const result = await audioCapRef.current.finishSession();
-
               console.log("[REC] uploaded:", result);
               console.log("[REC] isRecording after finish:", audioCapRef.current?.isRecording?.());
-
-
-              // ★セット終了後の分岐
-              if (setNo >= TOTAL_SETS) {
-                setAllDone(true);
-              }
-              // else 何もしない
-
-
             } catch (e) {
               console.warn("[REC] upload failed:", e);
             } finally {
+              // ★ここで必ず allDone を反映
+              if (isLastSet) setAllDone(true);
+
               endTimerIdRef.current = null;
-              // endLockedRef.current はここでは戻さない（次セット開始時に resetRun で解除）
             }
           }, END_DELAY);
+
 
         }
 
@@ -333,14 +337,13 @@ export default function TaskController() {
         </div>
 
         {/* ★ 時計の真下に開始ボタン */}
-        {!started && !allDone && (
+        {!started && !allDone && setNo === 1 && !finished && (
           <button
             className="controller-start-button"
             onClick={async () => {
-              const nextSetNo = (finished && setNo < TOTAL_SETS) ? setNo + 1 : setNo;
-
-              // 表示用の state を更新（必要なときだけ）
-              if (nextSetNo !== setNo) setSetNo(nextSetNo);
+              // 1セット目固定
+              setNoRef.current = 1;
+              if (setNo !== 1) setSetNo(1);
 
               setAllDone(false);
               await resetRun();
@@ -349,7 +352,7 @@ export default function TaskController() {
               try {
                 await audioCapRef.current.beginSession({
                   prefix: "session",
-                  extra: { participant, set: nextSetNo }, // ★ここが重要
+                  extra: { participant, set: 1 },
                 });
                 console.log("[REC] started");
               } catch (e) {
@@ -359,6 +362,7 @@ export default function TaskController() {
 
               setStarted(true);
             }}
+
           >
             開始
           </button>
@@ -377,18 +381,46 @@ export default function TaskController() {
           <div style={styles.setToast}>
             <span>{setNo}セット目終了しました．</span>
 
-            {allDone && (
+            {allDone ? (
+              <button style={styles.homeBtn} onClick={() => navigate("/")}>
+                ホーム画面へ
+              </button>
+            ) : (
               <button
                 style={styles.homeBtn}
-                onClick={() => navigate("/")}
+                onClick={async () => {
+                  const next = setNo + 1;
+
+                  // 次セット番号を確定（END_DELAY判定にも使う）
+                  setNoRef.current = next;
+                  setSetNo(next);
+
+                  setAllDone(false);
+                  await resetRun();
+                  setUnlockKey((k) => k + 1);
+
+                  try {
+                    await audioCapRef.current.beginSession({
+                      prefix: "session",
+                      extra: { participant, set: next },
+                    });
+                    console.log("[REC] started");
+                  } catch (e) {
+                    console.warn("[REC] start failed:", e);
+                    return;
+                  }
+
+                  setStarted(true);
+                }}
               >
-                ホーム画面へ
+                次のセットへ
               </button>
             )}
           </div>,
           document.body
         )
       }
+
     </div>
   );
 }
