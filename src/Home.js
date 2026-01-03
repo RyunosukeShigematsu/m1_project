@@ -8,7 +8,7 @@ function Home() {
     <div className="home-container">
       <div className="button-group">
         <button
-          onClick={() => navigate('/loginClock')}
+          onClick={() => navigate('/PracticeClock')}
           className="home-start-button clock"
         >
           時計タスク

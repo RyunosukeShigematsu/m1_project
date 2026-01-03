@@ -92,3 +92,41 @@
 .toast-btn:hover { opacity: 0.95; }
 .toast-btn:active { transform: scale(0.97); }
 
+
+/* ★ 練習終了ボタン */
+.practice-exit-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+
+  padding: 10px 14px;
+  font-size: 16px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+
+  background: linear-gradient(180deg, rgb(108, 138, 100), rgb(79, 106, 74));
+  color: rgb(246, 243, 234);
+}
+
+.practice-exit-btn:hover { opacity: 0.9; }
+.practice-exit-btn:active { transform: scale(0.98); }
+
+/* ★ 練習モード表示バッジ */
+.practice-badge{
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10000;
+
+  padding: 10px 14px;
+  font-size: 22px;
+  font-weight: 800;
+
+  border-radius: 16px;
+  background: rgba(255, 242, 204, 0.95);
+  color: #111;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
