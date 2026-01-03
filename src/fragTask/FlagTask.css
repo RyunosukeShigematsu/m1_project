@@ -1,3 +1,126 @@
+
+
+
+
+/* ===== 上部UI（Startカード or Progressバー） ===== */
+.top-slot {
+  position: absolute;
+  top: 30px;                /* ★ 80→56：上に収めやすく */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Start時は右上カウンタを消す想定なら（JSX側で started && にしてOK） */
+.trial-counter {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  z-index: 999;
+
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+
+  font-size: 16px;
+  font-weight: 800;
+  color: #2f3b2f;
+  user-select: none;
+}
+
+/* ===== さっき気に入ったカードUI（Start用） ===== */
+.start-card {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 18px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  background: #ffffff;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  text-align: center;
+}
+
+.start-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
+.start-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.80;
+}
+
+.start-meta {
+  font-size: 12px;
+  opacity: 0.60;
+  margin-top: -4px;
+}
+
+.start-btn {
+  width: 240px;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,0.90);
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ===== Progress bar ===== */
+.progress-wrapper {
+  width: 40vw;   /* バーの横幅 */
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 10px;
+  background-color: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #4caf50, #81c784);
+  transition: width 0.08s linear;
+  border-radius: 6px 0 0 6px;
+}
+
+/* ===== タスク指示文 ===== */
+.task-message {
+  position: absolute;
+  top: 120px;          /* バーの下に配置。微調整可能 */
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2f3b2f;
+  z-index: 10;
+  pointer-events: none;
+}
+
+
+
+
 /* ▼ サイズ調整用の変数 ▼ */
 :root {
   --cell-width: 200px; /* 1枚の横幅 */
@@ -394,108 +517,3 @@
   z-index: 3;
 }
 
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(to right, #4caf50, #81c784);
-  transition: width 0.08s linear;
-  border-radius: 6px 0 0 6px;
-}
-
-.task-message {
-  position: absolute;
-  top: 120px;          /* バーの下に配置。微調整可能 */
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: #2f3b2f;
-  z-index: 10;         /* バーより上に出す */
-  pointer-events: none; /* カード操作の邪魔をしない */
-}
-
-.trial-counter {
-  position: fixed;
-  top: 18px;
-  right: 22px;
-  z-index: 999;
-
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-
-  font-size: 16px;
-  font-weight: 800;
-  color: #2f3b2f;
-  user-select: none;
-}
-
-
-
-.top-slot {
-  position: absolute;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.start-button-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.flag-start-button {
-  width: 260px;          /* 横長 */
-  height: 44px;          /* 押しやすい高さ */
-  border-radius: 10px;   /* ★ ピルじゃなく“角丸四角” */
-  border: 1px solid #b4c4b2;
-
-  background: linear-gradient(
-    180deg,
-    #f8f6f0,
-    #f1eee7
-  );                     /* 既存UIと統一感 */
-
-  color: #2f3b2f;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-
-  cursor: pointer;
-  box-shadow:
-    0 4px 10px rgba(0,0,0,.12),
-    inset 0 1px 0 rgba(255,255,255,.6);
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
-}
-
-
-.progress-wrapper {
-  width: 40vw;   /* バーの横幅 */
-}
-
-.progress-bar-track {
-  width: 100%;
-  height: 10px;
-  background-color: #e0e0e0;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(to right, #4caf50, #81c784);
-  transition: width 0.08s linear;
-}

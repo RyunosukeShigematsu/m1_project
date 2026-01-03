@@ -8,14 +8,16 @@ import { flagSequence } from '../timeLine'; // ← ★ 追加
 
 
 export default function FlagTask() {
-  const MEMORIZE_SECONDS = 10; // ← ここだけ変えればOK！
+  const MEMORIZE_SECONDS = 5; // ← ここだけ変えればOK！
   const [timeLeft, setTimeLeft] = useState(MEMORIZE_SECONDS); // ← 制限時間（秒）をここで設定  
 
   const navigate = useNavigate();
   const { state } = useLocation();
-  
-  const TOTAL_TRIALS = state?.totalTrials ?? 3;
+
+  const setIndex = state?.setIndex ?? 0;     // 0始まり
+  const totalSets = state?.totalSets ?? 2;
   const trialIndex = state?.trialIndex ?? 0;
+  const TOTAL_TRIALS = state?.totalTrials ?? 2;
 
   // ★追加：started初期値を state から拾う
   const startedFromState = state?.started === true;
@@ -31,7 +33,7 @@ export default function FlagTask() {
   // プログレスバー用の割合計算（0〜100）
   const progress = (timeLeft / MEMORIZE_SECONDS) * 100;
 
-    useEffect(() => {
+  useEffect(() => {
     // 2回目以降（started:trueで戻ってくる想定）はStart不要
     if (state?.started === true) {
       setStarted(true);
@@ -46,31 +48,37 @@ export default function FlagTask() {
   // 🕒 タイマー減少処理（0.1秒ずつ減るタイプ）
   useEffect(() => {
     if (!started) return;
-    const timer = setInterval(() => {
+
+    const timer = window.setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 0.1) {
-          clearInterval(timer);
-          // setTimeLeft(0); // ← まずバーを完全に0に
-          // 0.3秒後に遷移（CSS反映の余裕を与える）
-          setTimeout(() => {
-            navigate('/flagAnswer', {
-              state: {
-                ids: ordered.map(c => c.id),
-                autoSubmit: true,
-                trialIndex,          // 今何回目か
-                totalTrials: TOTAL_TRIALS, // 全体で何回か
-                started: true, // ★追加
-              },
-            });
-          }, 300);
-          return 0;
-        }
-        return +(prev - 0.1).toFixed(1);
+        const next = +(prev - 0.1).toFixed(1);
+        return next <= 0 ? 0 : next;
       });
     }, 100);
 
-    return () => clearInterval(timer);
-  }, [started, navigate, ordered, trialIndex]);
+    return () => window.clearInterval(timer);
+  }, [started, trialIndex]);
+
+  useEffect(() => {
+    if (!started) return;
+    if (timeLeft > 0) return;
+
+    const t = window.setTimeout(() => {
+      navigate('/flagAnswer', {
+        state: {
+          ids: ordered.map(c => c.id),
+          autoSubmit: true,
+          trialIndex,
+          totalTrials: TOTAL_TRIALS,
+          setIndex,
+          totalSets,
+          started: true,
+        },
+      });
+    }, 300);
+
+    return () => window.clearTimeout(t);
+  }, [started, timeLeft, navigate, ordered, trialIndex, TOTAL_TRIALS, setIndex, totalSets]);
 
 
 
@@ -90,6 +98,7 @@ export default function FlagTask() {
   return (
     <div className="card-task-container">
 
+      {/* 本実験の時は消す */}
       <div className="trial-counter">
         {trialIndex + 1}/{TOTAL_TRIALS}
       </div>
@@ -97,16 +106,25 @@ export default function FlagTask() {
       {/* ★ 上部UIの共通置き場（位置だけ担当） */}
       <div className="top-slot">
         {!started ? (
-          <div className="start-button-wrapper">
+          <div className="start-card">
+
+            <div className="start-desc">
+              準備ができたら、実験者に声をかけてから開始してください。
+            </div>
+
+            {/* セット情報（必要なら表示） */}
+            <div className="start-meta">
+             セット {setIndex + 1} / {totalSets} ・ 1セット {TOTAL_TRIALS} 試行
+            </div>
+
             <button
-              className="flag-start-button"
+              className="start-btn"
               onClick={() => {
                 setLeftOpen(null);
                 setRightOpen(null);
                 setTimeLeft(MEMORIZE_SECONDS);
                 setStarted(true);
               }}
-
             >
               開始
             </button>
@@ -114,14 +132,12 @@ export default function FlagTask() {
         ) : (
           <div className="progress-wrapper">
             <div className="progress-bar-track">
-              <div
-                className="progress-bar"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="progress-bar" style={{ width: `${progress}%` }} />
             </div>
           </div>
         )}
       </div>
+
 
       {started && (
         <div className="task-message">

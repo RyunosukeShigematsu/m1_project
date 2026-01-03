@@ -1,5 +1,5 @@
 // --- 既存importそのまま ---
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './FlagTask.css';
 import FlipCard from './FlipCard';
@@ -16,7 +16,7 @@ function shuffle(arr) {
 }
 
 export default function FlagAnswer() {
-  const ANSWER_SECONDS = 10;
+  const ANSWER_SECONDS = 5;
   const [timeLeft, setTimeLeft] = useState(ANSWER_SECONDS);
   const progress = (timeLeft / ANSWER_SECONDS) * 100;
   const { state } = useLocation();
@@ -24,8 +24,13 @@ export default function FlagAnswer() {
   // ○×のフィードバック表示用（null | 'ok' | 'ng'）
   const [feedback, setFeedback] = useState(null);
 
+  const setIndex = state?.setIndex ?? 0;     // 0始まり
+  const totalSets = state?.totalSets ?? 2;
   const trialIndex = state?.trialIndex ?? 0;
-  const totalTrials = state?.totalTrials; // ← FlagTaskが渡してくる前提
+  const totalTrials = state?.totalTrials ?? 2;
+
+
+
 
   // 受け取り
   const base9 = useMemo(() => {
@@ -157,50 +162,72 @@ export default function FlagAnswer() {
 
 
   // ✅ 次へ：trialIndex を +1、最後なら finish へ
-  const goNext = () => {
-    const nextIndex = trialIndex + 1;
+  const goNext = useCallback(() => {
+    const nextTrial = trialIndex + 1;
 
-    if (nextIndex >= totalTrials) {
-      navigate('/finish', { replace: true, state: { totalTrials } });
+    if (nextTrial < totalTrials) {
+      navigate('/flagTask', {
+        replace: true,
+        state: {
+          trialIndex: nextTrial,
+          totalTrials,
+          setIndex,
+          totalSets,
+          started: true,
+        },
+      });
       return;
     }
 
-    // FlagTask側でTOTAL_TRIALSを保持してるが、表示のために毎回渡すのが安全
-    navigate('/flagTask', {
-      replace: true,
-      state: {
-        trialIndex: nextIndex,
-        totalTrials,
-        started: true,   // ★必須
-      },
-    });
+    const nextSet = setIndex + 1;
 
-  };
+    if (nextSet < totalSets) {
+      navigate('/flagRest', {
+        replace: true,
+        state: {
+          nextSetIndex: nextSet,
+          totalSets,
+          totalTrials,
+        },
+      });
+      return;
+    }
+
+    navigate('/flagFinish', {
+      replace: true,
+      state: { totalTrials, totalSets },
+    });
+  }, [trialIndex, totalTrials, setIndex, totalSets, navigate]);
 
 
   //カウントダウンタイマー
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 0.1) {
-          clearInterval(timer);
-          setTimeLeft(0);
-          setTimeout(() => {
-            goNext();
-          }, 300);
-          return 0;
-        }
-        return +(prev - 0.1).toFixed(1);
+        const next = +(prev - 0.1).toFixed(1);
+        return next <= 0 ? 0 : next;
       });
     }, 100);
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => window.clearInterval(timer);
+  }, [trialIndex, setIndex]);
+
+  useEffect(() => {
+    if (timeLeft > 0) return;
+
+    const t = window.setTimeout(() => {
+      goNext();
+    }, 300);
+
+    return () => window.clearTimeout(t);
+  }, [timeLeft, goNext]);
+
 
 
   return (
 
     <div className="card-task-container">
+            {/* 本実験の時は消す */}
       <div className="trial-counter">
         {trialIndex + 1}/{totalTrials}
       </div>
@@ -266,7 +293,7 @@ export default function FlagAnswer() {
         </div>
       </div>
 
-      {/* 下段：4枚（判定色を枠で表示） */}
+      {/* 下段：6枚（判定色を枠で表示） */}
       <div className="answer-bottom">
         {bottom.map((item, idx) => {
           const result = bottomResult[idx]; // 'ok' | 'ng' | null
