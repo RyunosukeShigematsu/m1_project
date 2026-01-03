@@ -1,6 +1,7 @@
 // src/DigitalClock/LoginClock.js
 import React, { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import  "./LoginClock.css";
 
 export default function LoginClock() {
     const [name, setName] = useState("");
@@ -39,138 +40,117 @@ export default function LoginClock() {
         }
     };
 
-    return (
-        <div style={styles.wrap}>
-            <h2 style={styles.title}>名前を入力</h2>
+   return (
+  <div className="login-wrap">
+    <div className="start-card login-card">
+      <div className="start-title">ログイン</div>
+      <div className="start-desc">
+        名前を入力して、実行モードを選んでください。
+      </div>
 
-            <input
-                ref={inputRef}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onCompositionStart={() => setIsComposing(true)}
-                onCompositionEnd={() => setIsComposing(false)}
-                placeholder="例：重松龍之介"
-                style={styles.input}
-            />
+      {/* 名前入力 */}
+      <div className="login-field">
+        <div className="login-label">参加者名</div>
+        <input
+          ref={inputRef}
+          className="login-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
+          placeholder="例：重松龍之介"
+        />
+      </div>
 
-            {/* ★追加：実行モード */}
-            <div style={styles.panel}>
-                <div style={styles.panelTitle}>実行モード</div>
-                <label style={styles.radioRow}>
-                    <input
-                        type="radio"
-                        name="runType"
-                        value="check"
-                        checked={runType === "check"}
-                        onChange={() => setRunType("check")}
-                    />
-                    <span>check（確認）</span>
-                </label>
+      {/* 実行モード */}
+      <div className="login-panel">
+        <div className="login-panel-title">実行モード</div>
 
-                <label style={styles.radioRow}>
-                    <input
-                        type="radio"
-                        name="runType"
-                        value="main"
-                        checked={runType === "main"}
-                        onChange={() => setRunType("main")}
-                    />
-                    <span>main（本番）</span>
-                </label>
-            </div>
+        <label className={`login-radio ${runType === "check" ? "is-active" : ""}`}>
+          <input
+            type="radio"
+            name="runType"
+            value="check"
+            checked={runType === "check"}
+            onChange={() => setRunType("check")}
+          />
+          <div className="login-radio-text">
+            <div className="login-radio-main">check</div>
+            <div className="login-radio-sub">確認（テスト実行）</div>
+          </div>
+        </label>
 
-            {/* ★追加：グループ（mainの時だけ有効） */}
-            <div style={{ ...styles.panel, opacity: runType === "main" ? 1 : 0.45 }}>
-                <div style={styles.panelTitle}>グループ（mainのみ）</div>
-                <label style={styles.radioRow}>
-                    <input
-                        type="radio"
-                        name="group"
-                        value="A"
-                        checked={group === "A"}
-                        onChange={() => setGroup("A")}
-                        disabled={runType !== "main"}
-                    />
-                    <span>Group A</span>
-                </label>
+        <label className={`login-radio ${runType === "main" ? "is-active" : ""}`}>
+          <input
+            type="radio"
+            name="runType"
+            value="main"
+            checked={runType === "main"}
+            onChange={() => setRunType("main")}
+          />
+          <div className="login-radio-text">
+            <div className="login-radio-main">main</div>
+            <div className="login-radio-sub">本番（参加者実験）</div>
+          </div>
+        </label>
+      </div>
 
-                <label style={styles.radioRow}>
-                    <input
-                        type="radio"
-                        name="group"
-                        value="B"
-                        checked={group === "B"}
-                        onChange={() => setGroup("B")}
-                        disabled={runType !== "main"}
-                    />
-                    <span>Group B</span>
-                </label>
-            </div>
+      {/* グループ（mainのみ） */}
+      <div className={`login-panel ${runType === "main" ? "" : "is-disabled"}`}>
+        <div className="login-panel-title">グループ（mainのみ）</div>
 
-            <button
-                onClick={handleNext}
-                disabled={!canGo}
-                style={{
-                    ...styles.button,
-                    backgroundColor: canGo ? "#16a34a" : "#9ca3af", // 緑 / グレー
-                    cursor: canGo ? "pointer" : "not-allowed",
-                }}
-            >
-                進む
-            </button>
+        <label className={`login-radio ${group === "A" ? "is-active" : ""}`}>
+          <input
+            type="radio"
+            name="group"
+            value="A"
+            checked={group === "A"}
+            onChange={() => setGroup("A")}
+            disabled={runType !== "main"}
+          />
+          <div className="login-radio-text">
+            <div className="login-radio-main">Group A</div>
+            <div className="login-radio-sub">条件A</div>
+          </div>
+        </label>
 
-            <button
-                onClick={() => navigate("/PracticeClock")}
-                style={styles.practiceButton}
-            >
-                練習に戻る
-            </button>
+        <label className={`login-radio ${group === "B" ? "is-active" : ""}`}>
+          <input
+            type="radio"
+            name="group"
+            value="B"
+            checked={group === "B"}
+            onChange={() => setGroup("B")}
+            disabled={runType !== "main"}
+          />
+          <div className="login-radio-text">
+            <div className="login-radio-main">Group B</div>
+            <div className="login-radio-sub">条件B</div>
+          </div>
+        </label>
+      </div>
 
-        </div>
-    );
+      {/* 操作ボタン */}
+      <div className="login-actions">
+        <button
+          className={`login-primary ${canGo ? "" : "is-disabled"}`}
+          onClick={handleNext}
+          disabled={!canGo}
+        >
+          進む
+        </button>
+
+        <button
+          className="login-secondary"
+          onClick={() => navigate("/PracticeClock")}
+        >
+          練習に戻る
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 }
 
-const styles = {
-    wrap: {
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 14,
-        padding: 24,
-    },
-    title: {
-        margin: 0,
-        fontSize: 24,
-    },
-    input: {
-        width: 320,
-        padding: "12px 14px",
-        fontSize: 16,
-        borderRadius: 8,
-        border: "1px solid #d1d5db",
-        outline: "none",
-        boxSizing: "border-box",
-    },
-    button: {
-        width: 320,
-        padding: "12px 14px",
-        fontSize: 16,
-        color: "white",
-        border: "none",
-        borderRadius: 10,
-    },
-    practiceButton: {
-        width: 320,
-        padding: "10px 14px",
-        fontSize: 15,
-        color: "#111827",              // 黒寄り
-        backgroundColor: "#e5e7eb",    // 薄いグレー
-        border: "none",
-        borderRadius: 10,
-        cursor: "pointer",
-    },
-
-};

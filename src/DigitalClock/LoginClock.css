@@ -1,0 +1,158 @@
+/* src/DigitalClock/LoginClock.css */
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #ffffff;
+}
+
+/* start-cardを流用しつつ、ログイン用に少し広げる */
+.login-card {
+  width: min(560px, calc(100vw - 32px));
+}
+
+/* ===== 入力 ===== */
+.login-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.login-label {
+  font-size: 12px;
+  opacity: 0.65;
+  text-align: left;
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.login-input:focus {
+  border-color: rgba(0,0,0,0.28);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.06);
+}
+
+/* ===== パネル ===== */
+.login-panel {
+  width: 100%;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.login-panel.is-disabled {
+  opacity: 0.45;
+}
+
+.login-panel-title {
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.65;
+  text-align: left;
+}
+
+/* ===== ラジオ（カード化） ===== */
+.login-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-radio input {
+  transform: scale(1.05);
+}
+
+.login-radio.is-active {
+  border-color: rgba(0,0,0,0.35);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+
+.login-radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.login-radio-main {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.login-radio-sub {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* ===== ヒント ===== */
+.login-hint {
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: left;
+  margin-top: 2px;
+}
+
+/* ===== ボタン ===== */
+.login-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.login-primary {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,0.90);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.login-primary.is-disabled {
+  background: rgba(0,0,0,0.25);
+  cursor: not-allowed;
+}
+
+.login-secondary {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.04);
+  color: #111;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-secondary:hover {
+  background: rgba(0,0,0,0.06);
+}

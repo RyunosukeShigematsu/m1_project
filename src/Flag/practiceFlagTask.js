@@ -92,7 +92,7 @@ export default function PracticeFlagTask() {
                     className="practice-exit-btn"
                     type="button"
                     onClick={() =>
-                        navigate("/flagTask", {
+                        navigate("/flagLogin", {
                             replace: true,
                             state: { started: false },
                         })
