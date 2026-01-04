@@ -1,16 +1,41 @@
 
 // 出現する9つの国旗
+// const flagSequenc = [
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+//   [1,2,3,4,5,6,7,8,9],
+// ];
+
+// timeLine.js
 const flagSequence = [
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
-  [1,2,3,4,5,6,7,8,9],
+  {
+    ids:      [1,2,3,4,5,6,7,8,9],   // 覚える9枚（固定）
+    bottomL:  [1,2,3],               // アンサー下段「左3枚（name）」固定
+    bottomR:  [1,8,9],               // アンサー下段「右3枚（flag）」固定
+  },
+];
+
+const flagSequence_A = [
+  {
+    ids:      [2,1,3,4,5,6,7,8,9],   // 覚える9枚（固定）
+    bottomL:  [2,1,3],               // アンサー下段「左3枚（name）」固定
+    bottomR:  [2,8,9],               // アンサー下段「右3枚（flag）」固定
+  },
+];
+
+const flagSequence_B = [
+  {
+    ids:      [3,2,1,4,5,6,7,8,9],   // 覚える9枚（固定）
+    bottomL:  [3,2,1],               // アンサー下段「左3枚（name）」固定
+    bottomR:  [3,8,9],               // アンサー下段「右3枚（flag）」固定
+  },
 ];
 
 const minute_question = "何分でしたか？";
@@ -188,4 +213,4 @@ const timeModeList_real = [
 
 
 
-export { flagSequence, practiceTimeModeList, systemCheckTimeModeList, timeModeList_real, timeModeList_A, timeModeList_B };
+export { flagSequence, flagSequence_A, flagSequence_B, practiceTimeModeList, systemCheckTimeModeList, timeModeList_real, timeModeList_A, timeModeList_B };

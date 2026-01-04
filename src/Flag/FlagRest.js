@@ -7,7 +7,7 @@ export default function FlagRest() {
   const { state } = useLocation();
 
   // 受け取る想定（なければデフォルト）
-  const restSeconds = Number.isFinite(state?.restSeconds) ? state.restSeconds : 20;
+  const restSeconds = Number.isFinite(state?.restSeconds) ? state.restSeconds : 5;
   const nextSetIndex = Number.isFinite(state?.nextSetIndex) ? state.nextSetIndex : 0; // 0-based
   const totalSets = Number.isFinite(state?.totalSets) ? state.totalSets : 1;
   const totalTrials = Number.isFinite(state?.totalTrials) ? state.totalTrials : 1;
@@ -16,6 +16,7 @@ export default function FlagRest() {
   const [timeLeft, setTimeLeft] = useState(initial);
   const done = timeLeft <= 0;
 
+  const runType = state?.runType ?? "check";
   // StrictMode対策：interval多重起動防止
   const intervalRef = useRef(null);
 
@@ -49,6 +50,7 @@ export default function FlagRest() {
         trialIndex: 0,
         totalTrials,
         started: false, // 次セットはStartを出す
+        runType,
       },
     });
   };

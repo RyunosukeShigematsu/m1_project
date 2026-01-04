@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './FlagTask.css';
 import FlipCard from './FlipCard';
 import COUNTRIES from './countries';
+import { flagSequence, flagSequence_A, flagSequence_B } from '../timeLine'; // ← ★ 追加
 
 
 function shuffle(arr) {
@@ -24,11 +25,22 @@ export default function FlagAnswer() {
   // ○×のフィードバック表示用（null | 'ok' | 'ng'）
   const [feedback, setFeedback] = useState(null);
 
+
   const setIndex = state?.setIndex ?? 0;     // 0始まり
   const totalSets = state?.totalSets ?? 2;
   const trialIndex = state?.trialIndex ?? 0;
-  const totalTrials = state?.totalTrials ?? 2;
 
+  const runType = state?.runType ?? "check";
+
+  const activeSeq = useMemo(() => {
+    if (runType === "check") return flagSequence;
+    return setIndex % 2 === 0 ? flagSequence_A : flagSequence_B;
+  }, [runType, setIndex]);
+
+  const totalTrials = activeSeq.length;
+
+  const bottomL = Array.isArray(state?.bottomL) ? state.bottomL : null; // [id,id,id]
+  const bottomR = Array.isArray(state?.bottomR) ? state.bottomR : null; // [id,id,id]
 
 
 
@@ -37,7 +49,7 @@ export default function FlagAnswer() {
     if (!state?.ids || !Array.isArray(state.ids) || state.ids.length === 0) return null;
     const map = new Map(COUNTRIES.map(c => [c.id, c]));
     const arr = state.ids.map(id => map.get(+id)).filter(Boolean);
-    return shuffle(arr)
+    return arr
   }, [state]);
 
   useEffect(() => {
@@ -57,17 +69,29 @@ export default function FlagAnswer() {
   // 下段4枚（左2=name / 右2=flag）
   const bottom = useMemo(() => {
     if (!base9) return [];
-    // 9枚の中からランダムに6枚選ぶ
-    const selected = shuffle(base9).slice(0, 6);
-    // 左右に3枚ずつ分割（重複なし）
-    const names = selected.slice(0, 3);
-    const flags = selected.slice(3, 6);
+    // ids -> country の map（base9内の9種だけ参照）
+    const idMap = new Map(base9.map(c => [c.id, c]));
+
+    // stateが渡ってないときは保険として従来のランダムにフォールバック
+    if (!bottomL || !bottomR || bottomL.length !== 3 || bottomR.length !== 3) {
+      const selected = shuffle(base9).slice(0, 6);
+      const names = selected.slice(0, 3);
+      const flags = selected.slice(3, 6);
+      return [
+        ...names.map(n => ({ kind: 'name', data: n })),
+        ...flags.map(f => ({ kind: 'flag', data: f })),
+      ];
+    }
+    const names = bottomL.map(id => idMap.get(+id)).filter(Boolean);
+    const flags = bottomR.map(id => idMap.get(+id)).filter(Boolean);
 
     return [
-      ...names.map(n => ({ kind: 'name', data: n })),
-      ...flags.map(f => ({ kind: 'flag', data: f })),
+      ...names.map(n => ({ kind: 'name', data: n })), // 左3（name）
+      ...flags.map(f => ({ kind: 'flag', data: f })), // 右3（flag）
     ];
-  }, [base9]);
+  }, [base9, bottomL, bottomR]);
+
+
 
   // 上段は「表裏の状態」（初期=裏）
   const [leftFlips, setLeftFlips] = useState(() => Array(9).fill(false));
@@ -86,6 +110,13 @@ export default function FlagAnswer() {
   // ✅ 最初にすべて「裏」の状態で初期化
   // const [bottomOpen, setBottomOpen] = useState([false, false, false, false]);
   const [bottomOpen, setBottomOpen] = useState(Array(6).fill(false));
+
+  useEffect(() => {
+    setBottomResult(Array(6).fill(null));
+    setBottomOpen(Array(6).fill(false));
+    setActiveBottom(null);
+    setFeedback(null);
+  }, [trialIndex]);
 
 
   // 下段クリック：押した側=表 / 反対側=裏（あなたの前回仕様のまま）
@@ -174,6 +205,7 @@ export default function FlagAnswer() {
           setIndex,
           totalSets,
           started: true,
+          runType,
         },
       });
       return;
@@ -188,6 +220,7 @@ export default function FlagAnswer() {
           nextSetIndex: nextSet,
           totalSets,
           totalTrials,
+          runType,
         },
       });
       return;
@@ -227,7 +260,7 @@ export default function FlagAnswer() {
   return (
 
     <div className="card-task-container">
-            {/* 本実験の時は消す */}
+      {/* 本実験の時は消す */}
       <div className="trial-counter">
         {trialIndex + 1}/{totalTrials}
       </div>

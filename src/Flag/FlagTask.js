@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './FlagTask.css';
 import FlipCard from './FlipCard';
 import COUNTRIES from './countries';
-import { flagSequence } from '../timeLine'; // ← ★ 追加
+import { flagSequence, flagSequence_A, flagSequence_B } from '../timeLine'; // ← ★ 追加
 
 
 export default function FlagTask() {
@@ -17,18 +17,28 @@ export default function FlagTask() {
   const setIndex = state?.setIndex ?? 0;     // 0始まり
   const totalSets = state?.totalSets ?? 2;
   const trialIndex = state?.trialIndex ?? 0;
-  const TOTAL_TRIALS = state?.totalTrials ?? 2;
+
+  const runType = state?.runType ?? "check";
+  const activeSeq = useMemo(() => {
+    if (runType === "check") return flagSequence;
+    return setIndex % 2 === 0 ? flagSequence_A : flagSequence_B;
+  }, [runType, setIndex]);
+
+  const TOTAL_TRIALS = activeSeq.length;
 
   // ★追加：started初期値を state から拾う
   const startedFromState = state?.started === true;
   const [started, setStarted] = useState(startedFromState);
 
   // === 国旗リストをflagSequenceから取得 ===
+  // const ordered = useMemo(() => {
+  // const ids = flagSequence[trialIndex]; // [1,2,3,4,5,6,7,8,9]
   const ordered = useMemo(() => {
-    const ids = flagSequence[trialIndex]; // [1,2,3,4,5,6,7,8,9]
+    const spec = activeSeq[trialIndex];
+    const ids = spec?.ids ?? [];
     const map = new Map(COUNTRIES.map(c => [c.id, c]));
     return ids.map(id => map.get(id)).filter(Boolean);
-  }, [trialIndex]);
+  }, [trialIndex, activeSeq]);
 
   // プログレスバー用の割合計算（0〜100）
   const progress = (timeLeft / MEMORIZE_SECONDS) * 100;
@@ -43,6 +53,8 @@ export default function FlagTask() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trialIndex]);
+
+
 
 
   // 🕒 タイマー減少処理（0.1秒ずつ減るタイプ）
@@ -67,12 +79,15 @@ export default function FlagTask() {
       navigate('/flagAnswer', {
         state: {
           ids: ordered.map(c => c.id),
+          bottomL: activeSeq[trialIndex]?.bottomL,
+          bottomR: activeSeq[trialIndex]?.bottomR,
           autoSubmit: true,
           trialIndex,
           totalTrials: TOTAL_TRIALS,
           setIndex,
           totalSets,
           started: true,
+          runType,
         },
       });
     }, 300);
@@ -114,7 +129,7 @@ export default function FlagTask() {
 
             {/* セット情報（必要なら表示） */}
             <div className="start-meta">
-             セット {setIndex + 1} / {totalSets} ・ 1セット {TOTAL_TRIALS} 試行
+              セット {setIndex + 1} / {totalSets} ・ 1セット {TOTAL_TRIALS} 試行
             </div>
 
             <button
