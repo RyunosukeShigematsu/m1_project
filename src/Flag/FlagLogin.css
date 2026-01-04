@@ -1,5 +1,4 @@
 /* src/DigitalClock/LoginClock.css */
-
 .login-wrap {
   min-height: 100vh;
   display: flex;
@@ -8,12 +7,10 @@
   padding: 24px;
   background: #ffffff;
 }
-
 /* start-cardを流用しつつ、ログイン用に少し広げる */
 .login-card {
   width: min(560px, calc(100vw - 32px));
 }
-
 /* ===== 入力 ===== */
 .login-field {
   width: 100%;
